@@ -1,5 +1,8 @@
 package servlet;
 
+import accounts.AccountService;
+import accounts.UserProfile;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -14,24 +17,46 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-@WebServlet("/")
-public class DirServlet extends HttpServlet {
+@WebServlet("/explorer")
+public class Servlet extends HttpServlet {
 
-    private String defaultFolder = "C:";
+    private String userPath = "servlet/users/";
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
+        UserProfile userProfile = AccountService.getInstance().getUserBySessionId(req.getSession().getId());
+        String login = userProfile.getLogin();
+
+        req.setAttribute("name", "Hello, " + login);
+
+        userPath = "D:/";
+        userPath += login;
+
         String path = req.getParameter("path");
-        path = path == null ? defaultFolder : path;
+        path = path == null ? userPath : path;
 
         Path pathToFile = Paths.get(path);
         File file = pathToFile.toFile();
 
+        File dir = new File(userPath);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
         if (file.isFile()){
-            resp.setHeader("Content-Type", "application/octet-stream");
-            resp.setHeader("Content-Disposition", String.format("attachment; filename=\"%s\"", file.getName()));
+            String name = file.getName();
+
+            if (name.endsWith(".txt")) {
+                resp.setContentType("text/plain");
+            }
+            else {
+                resp.setHeader("Content-Type", "application/octet-stream");
+                resp.setHeader("Content-Disposition", String.format("attachment; filename=\"%s\"", file.getName()));
+            }
+
+
 
             FileInputStream inputStream = new FileInputStream(file);
             OutputStream outputStream = resp.getOutputStream();
@@ -46,13 +71,21 @@ public class DirServlet extends HttpServlet {
             inputStream.close();
             outputStream.close();
         }else{
-            printDirectory(req, path == null ? defaultFolder : path);
+            printDirectory(req, path == null ? userPath : path);
 
             req.setAttribute("now", new Date());
-            req.setAttribute("name", path == null ? defaultFolder : path);
-            req.getRequestDispatcher("explorer.jsp").forward(req, resp);
+            req.setAttribute("name", path == null ? userPath : path);
+            req.getRequestDispatcher("web.jsp").forward(req, resp);
         }
     }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        AccountService.getInstance().deleteSession( req.getSession().getId());
+        resp.sendRedirect("/ServletWithJSP_war/");
+    }
+
 
     private void printDirectory(HttpServletRequest req, String path) {
 

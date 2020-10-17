@@ -15,6 +15,11 @@
     <title>Directories</title>
 </head>
 <body>
+
+<form action="explorer" method="post" style="float: right">
+    <input type="submit" name="logout" value="Logout"/>
+</form>
+
 <div style="margin-left: 10px; font-size: 20pt;">${now}</div>
 <div style="margin-left: 13px ; font-size: 20pt;"> ${button} </div>
 <h1 style="margin-left: 10px">${name}</h1>

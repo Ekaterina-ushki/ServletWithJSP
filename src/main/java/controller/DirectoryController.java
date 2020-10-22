@@ -1,7 +1,7 @@
-package servlet;
+package controller;
 
-import accounts.AccountService;
-import accounts.UserProfile;
+import dbService.data.UserData;
+import services.SessionService;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -18,7 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @WebServlet("/explorer")
-public class Servlet extends HttpServlet {
+public class DirectoryController extends HttpServlet {
 
     private String userPath = "servlet/users/";
 
@@ -26,7 +26,7 @@ public class Servlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        UserProfile userProfile = AccountService.getInstance().getUserBySessionId(req.getSession().getId());
+        UserData userProfile = SessionService.getInstance().getUserBySessionId(req.getSession().getId());
         String login = userProfile.getLogin();
 
         req.setAttribute("name", "Hello, " + login);
@@ -82,7 +82,7 @@ public class Servlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        AccountService.getInstance().deleteSession( req.getSession().getId());
+        SessionService.getInstance().deleteSession( req.getSession().getId());
         resp.sendRedirect("/ServletWithJSP_war/");
     }
 

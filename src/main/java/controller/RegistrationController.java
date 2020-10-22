@@ -1,7 +1,9 @@
 package controller;
 
-import accounts.AccountService;
-import accounts.UserProfile;
+import dbService.DBException;
+import dbService.DBService;
+import dbService.data.UserData;
+import services.SessionService;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -12,30 +14,50 @@ import java.io.IOException;
 
 @WebServlet("/registration")
 public class RegistrationController extends HttpServlet {
+
+    private DBService dbService = new DBService();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        req.getRequestDispatcher("registration.jsp").forward(req, resp);
+    }
+
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String login = req.getParameter("login");
         String password = req.getParameter("pass1");
-        String passwordConfirm = req.getParameter("pass2");
+        String passwordProof = req.getParameter("pass2");
         String email = req.getParameter("email");
 
         clearErrors(req);
 
-        if (!checkErrors(req, login, password, passwordConfirm, email)) {
-            UserProfile userProfile = new UserProfile(login, password, email);
-            AccountService.getInstance().addNewUser(userProfile);
-            req.getRequestDispatcher("index.jsp").forward(req, resp);
-        } else {
+        boolean errorStatus = false;
+        try {
+            errorStatus = checkErrors(req, login, password, passwordProof, email);
+        } catch (DBException e) {
+            e.printStackTrace();
+        }
+
+        if (errorStatus) {
             req.setAttribute("login", login);
             req.setAttribute("pass1", password);
-            req.setAttribute("pass2", passwordConfirm);
+            req.setAttribute("pass2", passwordProof);
             req.setAttribute("email", email);
             req.getRequestDispatcher("registration.jsp").forward(req, resp);
+        } else {
+            UserData userProfile = new UserData(login, password, email);
+
+            try {
+                dbService.addUser(userProfile);
+            } catch (DBException e) {
+                e.printStackTrace();
+            }
+            resp.sendRedirect("/ServletWithJSP_war/");
         }
     }
 
     private boolean checkErrors(HttpServletRequest req, String login, String firstPassword, String secondPassword,
-                                String email) {
+                                String email) throws DBException {
         if (login == null || login.equals("")) {
             req.setAttribute("loginErr", "Поле не заполнено");
         } else if (firstPassword == null || firstPassword.equals("")) {
@@ -44,12 +66,11 @@ public class RegistrationController extends HttpServlet {
             req.setAttribute("pass2Err", "Поле не заполнено");
         } else if (email == null || email.equals("")) {
             req.setAttribute("emailErr", "Поле не заполнено");
-        } else if (AccountService.getInstance().getUserByLogin(login) != null) {
-            req.setAttribute("loginErr", "Данный логин уже существует");
         } else if (!firstPassword.equals(secondPassword)) {
             req.setAttribute("pass2Err", "Пароли не совпадают");
-        } else
-            return false;
+        } else if (dbService.getUser(login).getLogin() != null) {
+            req.setAttribute("loginErr", "Данный логин уже существует");
+        } else return false;
         return true;
     }
 

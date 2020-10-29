@@ -36,36 +36,28 @@ public class EntryController extends HttpServlet {
 
         clearErrors(req);
 
-        boolean errorStatus = false;
-        try {
-            errorStatus = checkErrors(req, login, password);
-        } catch (DBException e) {
-            e.printStackTrace();
-        }
-
-        if (errorStatus) {
+        if (checkErrors(req, login, password)) {
             req.setAttribute("login", login);
             req.setAttribute("pass", password);
             req.getRequestDispatcher("index.jsp").forward(req, resp);
         } else {
-            UserData userProfile = null;
-            try {
-                userProfile = dbService.getUser(login);
-            } catch (DBException e) {
-                e.printStackTrace();
+            UserData userData = dbService.getUser(login);
+            if (userData == null || !userData.getPassword().equals(password)) {
+                req.getRequestDispatcher("registration.jsp").forward(req, resp);
+                return;
             }
-            SessionService.getInstance().addSession(req.getSession().getId(), userProfile);
+            SessionService.getInstance().addSession(req.getSession().getId(), userData);
             resp.sendRedirect("/ServletWithJSP_war/explorer");
         }
     }
 
-    private boolean checkErrors(HttpServletRequest req, String login, String password) throws DBException {
+    private boolean checkErrors(HttpServletRequest req, String login, String password) {
 
         if (login == null || login.equals("")) {
             req.setAttribute("loginErr", "Поле не заполнено");
         } else if (password == null || password.equals("")) {
             req.setAttribute("passErr", "Поле не заполнено");
-        } else if (!dbService.checkUserExists(login)) {
+        } else if (dbService.getUser(login) == null) {
             req.setAttribute("loginErr", "Аккаунта с таким логином не существует");
         } else if (!dbService.getUser(login).getPassword().equals(password)) {
             req.setAttribute("passErr", "Неверный пароль");

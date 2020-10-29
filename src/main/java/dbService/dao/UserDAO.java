@@ -1,44 +1,26 @@
 package dbService.dao;
 
 import dbService.data.UserData;
-import dbService.executor.Executor;
-
-import java.sql.Connection;
-import java.sql.SQLException;
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.criterion.Restrictions;
 
 public class UserDAO {
 
-    private Executor executor;
+    private Session session;
 
-    public UserDAO(Connection connection) {
-        this.executor = new Executor(connection);
+    public UserDAO(Session session) {
+        this.session = session;
     }
 
-    public UserData getUser(String login) throws SQLException {
-        return executor.execQuery("select * from users where user_login='" + login + "'", result -> {
-            result.next();
-            return new UserData(result.getString(2),
-                    result.getString(3),
-                    result.getString(4));
-        });
+    public UserData getUser(String login) throws HibernateException {
+        Criteria criteria = session.createCriteria(UserData.class);
+        return (UserData) criteria.add(Restrictions.eq("login", login)).uniqueResult();
     }
 
-    public boolean checkUserExists(String login) throws SQLException {
-        return executor.execQuery("select exists (select * from users where user_login='" + login + "')", result -> {
-            result.next();
-            return result.getBoolean(1);
-        });
+    public void insertUser(String login, String password, String email) throws HibernateException {
+        session.save(new UserData(login, password, email));
     }
 
-    public void insertUser(String login, String password, String email) throws SQLException {
-        executor.execUpdate("insert into users (user_login, user_pass, user_email) values ('" + login + "', '" + password + "', '" + email + "')");
-    }
-
-    public void createTable() throws SQLException {
-        executor.execUpdate("create table if not exists users (id bigint auto_increment primary key, user_login varchar(255), user_pass varchar(255), user_email varchar(255))");
-    }
-
-    public void dropTable() throws SQLException {
-        executor.execUpdate("drop table users");
-    }
 }

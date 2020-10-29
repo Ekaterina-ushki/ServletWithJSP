@@ -2,89 +2,59 @@ package dbService;
 
 import dbService.dao.UserDAO;
 import dbService.data.UserData;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.cfg.Configuration;
+import org.hibernate.service.ServiceRegistry;
 
-import java.sql.Connection;
-import java.sql.Driver;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 
 public class DBService {
-    private final Connection connection;
+    private static SessionFactory sessionFactory;
 
     public DBService() {
-        this.connection = getMysqlConnection();
-        System.out.println("Соединение с СУБД выполнено.");
+        Configuration configuration = getConfiguration();
+        sessionFactory = createSessionFactory(configuration);
+        System.out.println("The connection to the DBMS is complete.");
     }
 
-    public UserData getUser(String login) throws DBException {
-        try {
-            return (new UserDAO(connection).getUser(login));
-        } catch (SQLException e) {
-            throw new DBException(e);
-        }
+    public UserData getUser(String login) {
+        Session session = sessionFactory.openSession();
+        UserData userData = new UserDAO(session).getUser(login);
+        session.close();
+        return userData;
     }
 
-    public boolean checkUserExists(String login) throws DBException {
-        try {
-            return (new UserDAO(connection).checkUserExists(login));
-        } catch (SQLException e) {
-            throw new DBException(e);
-        }
+    public void addUser(UserData userData)  {
+        Session session = sessionFactory.openSession();
+        Transaction transaction = session.beginTransaction();
+        UserDAO userDAO = new UserDAO(session);
+        userDAO.insertUser(userData.getLogin(), userData.getPassword(), userData.getEmail());
+        transaction.commit();
+        session.close();
     }
 
-    public void addUser(UserData userData) throws DBException {
-        try {
-            connection.setAutoCommit(false);
-            UserDAO dao = new UserDAO(connection);
-            dao.createTable();
-            dao.insertUser(userData.getLogin(), userData.getPassword(), userData.getEmail());
-            connection.commit();
-        } catch (SQLException e) {
-            try {
-                connection.rollback();
-            } catch (SQLException ignore) {
-            }
-            throw new DBException(e);
-        } finally {
-            try {
-                connection.setAutoCommit(true);
-            } catch (SQLException ignore) {
-            }
-        }
+    public static Configuration getConfiguration() {
+        Configuration configuration = new Configuration();
+        configuration.addAnnotatedClass(UserData.class);
+
+        configuration.setProperty("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
+        configuration.setProperty("hibernate.connection.driver_class", "com.mysql.cj.jdbc.Driver");
+        configuration.setProperty("hibernate.connection.url", "jdbc:mysql://localhost:3306/jdbc?serverTimezone=UTC");
+        configuration.setProperty("hibernate.connection.username", "root");
+        configuration.setProperty("hibernate.connection.password", "root");
+        configuration.setProperty("hibernate.show_sql", "true");
+        configuration.setProperty("hibernate.hbm2ddl.auto", "update");
+        return configuration;
     }
 
-
-    public void cleanUp() throws DBException {
-        UserDAO dao = new UserDAO(connection);
-        try {
-            dao.dropTable();
-        } catch (SQLException e) {
-            throw new DBException(e);
-        }
+    private static SessionFactory createSessionFactory(Configuration configuration) {
+        StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder();
+        builder.applySettings(configuration.getProperties());
+        ServiceRegistry serviceRegistry = builder.build();
+        return configuration.buildSessionFactory(serviceRegistry);
     }
 
-    public static Connection getMysqlConnection() {
-        try {
-            DriverManager.registerDriver((Driver) Class.forName("com.mysql.cj.jdbc.Driver").newInstance());
-
-            StringBuilder url = new StringBuilder();
-
-            url.
-                    append("jdbc:mysql://").        //db type
-                    append("localhost:").           //host name
-                    append("3306/").                //port
-                    append("jdbc?").          //db name
-                    append("user=root&").          //login
-                    append("password=root&").   //password
-                    append("serverTimezone=UTC");
-
-            System.out.println("URL: " + url + "\n");
-
-            return DriverManager.getConnection(url.toString());
-        } catch (SQLException | InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 }
 

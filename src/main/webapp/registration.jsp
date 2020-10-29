@@ -8,11 +8,11 @@
     <title>Регистрация</title>
 </head>
 <body>
-<form action="registration" method="POST">
-    Login: <input type="text" name="login" value="${login}"/>${loginErr}<br><br>
-    Password: <input type="password" name="pass1" value="${pass1}"/>${pass1Err}<br><br>
-    Retry password: <input type="password" name="pass2" value="${pass2}"/>${pass2Err}<br><br>
-    Email: <input type="email" name="email" value="${email}"/>${emailErr}<br><br>
+<form action="registration" method="POST" style="display: flex; justify-content: center; align-items:center; flex-direction: column; margin:0">
+    Login: <input type="text" name="login" value="${login}"/>${loginErr}<br>
+    Password: <input type="password" name="pass1" value="${pass1}"/>${pass1Err}<br>
+    Retry password: <input type="password" name="pass2" value="${pass2}"/>${pass2Err}<br>
+    Email: <input type="email" name="email" value="${email}"/>${emailErr}<br>
     <input type="submit" value="Sign up">
 </form>
 </body>
